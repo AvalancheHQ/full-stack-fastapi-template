@@ -1,0 +1,40 @@
+name: CodSpeed
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    env:
+      CODSPEED_LOG: debug
+      CODSPEED_USE_PERF: 1
+      CODSPEED_RUNNER_MODE: "walltime"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.8"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: docker compose up -d db
+      - name: Migrate DB
+        run: uv run bash scripts/prestart.sh
+        working-directory: backend
+      - name: Run tests
+        uses: CodSpeedHQ/action@main
+        with:
+          working-directory: backend
+          run: uv run pytest -k test_create_item
+          token: ${{ secrets.CODSPED_TOKEN }}
+          runner-version: 3.6.0
